@@ -19,13 +19,16 @@ import           Text.XmlHtml
 
 ------------------------------------------------------------------------------
 -- | Pre-made list of all the splices that we can build for you.
-snapHeistSplices :: MonadSnap m => [(T.Text, Splice m)]
+snapHeistSplices :: (MonadAuth m, MonadMongoDB m) => [(T.Text, Splice m)]
 snapHeistSplices =
     [ ("rqparam", paramSplice)
     , ("bindParams", bindParamsSplice)
     , ("ifLoggedIn", ifLoggedIn)
     , ("ifGuest", ifGuest)
     , ("requireAuth", requireAuth)
+    -- You may want to use something like this instead
+    --, ("requireAuth", requireAuthBounce "/login")
+    
 
     -- Example
     --, ("currentUser", userField username)
@@ -100,4 +103,15 @@ userField field = do
 requireAuth :: (MonadAuth m, MonadMongoDB m) => Splice m
 requireAuth = do
     lift $ requireUser pass (return [])
+
+
+------------------------------------------------------------------------------
+-- | Redirects to the specified page from rendering if the user isn't logged
+-- in.  A parameter "redirectTo" is added to the redirected page to allow the
+-- page to bounce the user back to the originally requested page if desired.
+requireAuthBounce :: (MonadAuth m, MonadMongoDB m) => B.ByteString -> Splice m
+requireAuthBounce url = do
+    uri <- lift $ withRequest (return . rqURI)
+    let newPage = redirect (B.concat [url, "?redirectTo=", uri])
+    lift $ requireUser newPage (return [])
 
