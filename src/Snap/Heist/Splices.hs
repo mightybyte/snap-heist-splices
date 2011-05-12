@@ -16,6 +16,7 @@ import           Snap.Types
 import           Text.Templating.Heist
 import           Text.XmlHtml
 
+import           Snap.Heist.Helpers
 
 ------------------------------------------------------------------------------
 -- | Pre-made list of all the splices that we can build for you.
@@ -58,7 +59,7 @@ bindParamsSplice = do
     params <- lift getParams
     let f k v accum = modifyTS (bindString ("p:" `T.append` decodeUtf8 k)
                                            (decodeUtf8 $ B.concat v)) : accum
-    sequence $ M.foldWithKey f [] params
+    sequence $ M.foldrWithKey f [] params
     return []
 
 ------------------------------------------------------------------------------
@@ -69,20 +70,14 @@ bindParamsSplice = do
 -- | Renders the child nodes only if the request comes from an authenticated
 -- user.
 ifLoggedIn :: (MonadAuth m, MonadMongoDB m) => Splice m
-ifLoggedIn = do
-    node <- getParamNode
-    res <- lift $ requireUser (return []) (return $ childNodes node)
-    return res
+ifLoggedIn = conditionalSplice =<< lift isLoggedIn
 
 
 ------------------------------------------------------------------------------
 -- | Renders the child nodes only if the request comes from a user that is not
 -- logged in.
 ifGuest :: (MonadAuth m, MonadMongoDB m) => Splice m
-ifGuest = do
-    node <- getParamNode
-    res <- lift $ requireUser (return $ childNodes node) (return [])
-    return res
+ifGuest = conditionalSplice . not =<< lift isLoggedIn
 
 
 ------------------------------------------------------------------------------

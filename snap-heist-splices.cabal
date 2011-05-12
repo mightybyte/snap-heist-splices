@@ -17,6 +17,7 @@ Library
   hs-source-dirs: src
 
   exposed-modules:
+    Snap.Heist.Helpers,
     Snap.Heist.Splices
 
   build-depends:
